@@ -15,8 +15,6 @@ class role_openvas (
   $repo_dir             = '/opt/openvas',
   $openvas_password     = 'PASSWORD',
   $lets_encrypt_mail    = 'mail@example.com',
-  $traefik_toml_file    = '/opt/traefik/traefik.toml',
-  $traefik_acme_json    = '/opt/traefik/acme.json',
   $siteUrl              = 'openvas.naturalis.nl'
 ){
 
@@ -28,21 +26,14 @@ class role_openvas (
     cwd  => "${role_openvas::repo_dir}",
   }
 
-  file { ['/data','/opt/traefik'] :
+  file { ['/data'] :
     ensure              => directory,
   }
 
-  file { $traefik_toml_file :
+  file { "${role_openvas::repo_dir}/nginx_ssl.conf":
     ensure   => file,
-    content  => template('role_openvas/traefik.toml.erb'),
-    require  => File['/opt/traefik'],
-    notify   => Exec['Restart containers on change'],
-  }
-
-  file { $traefik_acme_json :
-    ensure   => present,
-    mode     => '0600',
-    require  => File['/opt/traefik'],
+    content  => template('role_openvas/nginx_ssl.conf.erb'),
+    require  => Vcsrepo[$role_openvas::repo_dir],
     notify   => Exec['Restart containers on change'],
   }
 
@@ -79,9 +70,7 @@ class role_openvas (
     ensure      => present,
     require     => [ 
       Vcsrepo[$role_openvas::repo_dir],
-      File[$traefik_acme_json],
       File["${role_openvas::repo_dir}/.env"],
-      File[$traefik_toml_file],
       Docker_network['web']
     ]
   }
